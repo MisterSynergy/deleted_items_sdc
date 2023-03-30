@@ -1,0 +1,8 @@
+# The "token" file (name without file extension) should contain nothing but
+# the "wcqsOauth" token as described in:
+# https://commons.wikimedia.org/wiki/Commons:SPARQL_query_service/API_endpoint
+#
+# The token is necessary to authenticate against the Wikimedia Commons Query
+# Service (WCQS).
+# 
+# Make sure to chmod 600 this file in order to restrict access by others.
