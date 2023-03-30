@@ -171,10 +171,15 @@ def chunk_list(lst:list, chunk_size:int=WCQS_CHUNK_SIZE) -> Generator[list, None
         yield lst[i:i+chunk_size]
 
 
-def make_presentable_dataframe(results:list[dict[str, str]]) -> pd.DataFrame:
+def make_presentable_dataframe(results:list[dict[str, str]], qids:pd.DataFrame) -> pd.DataFrame:
     df = pd.DataFrame.from_dict(
         data=results,
-
+    )
+    df = df.merge(
+        right=qids,
+        how='left',
+        left_on='item',
+        right_on='qid',
     )
 
     df2 = df.loc[df['subject'].str.len()>12, ['item', 'admin', 'ts']].drop_duplicates()
@@ -283,22 +288,17 @@ def main() -> None:
                     continue
                 item = item[len(prefix):]
 
-            admin = qids.loc[qids['qid']==item, 'admin'].item()
-            ts = qids.loc[qids['qid']==item, 'ts'].item()
-
             results.append(
                 {
                     'subject' : subject,
                     'predicate' : predicate,
                     'item' : item,
-                    'admin' : admin,
-                    'ts' : ts
                 }
             )
 
         sleep(WCQS_SLEEP)
 
-    df = make_presentable_dataframe(results)
+    df = make_presentable_dataframe(results, qids)
     logging.info(f'Found {df.shape[0]} cases to list on report page')
 
     table = make_table(df)
