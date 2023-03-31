@@ -202,6 +202,8 @@ def make_table(df:pd.DataFrame) -> str:
 ! item !! deleted by !! deletion time !! SDC uses
 """
 
+    df = df.loc[df['item'].str.removeprefix('Q').astype(int).sort_values().index]  # sort by QID
+
     for tpl in df.itertuples():
         table += f"""|-
 | [[{tpl.item}]] || [[User:{tpl.admin}|{tpl.admin}]] || {tpl.timestamp} || {tpl.cnt}
