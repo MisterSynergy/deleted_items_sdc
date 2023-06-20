@@ -171,10 +171,27 @@ def chunk_list(lst:list, chunk_size:int=WCQS_CHUNK_SIZE) -> Generator[list, None
         yield lst[i:i+chunk_size]
 
 
-def make_presentable_dataframe(results:list[dict[str, str]], qids:pd.DataFrame) -> pd.DataFrame:
-    df = pd.DataFrame.from_dict(
-        data=results,
-    )
+def spot_invalid_references(session:requests.Session, s:pd.Series) -> list[str]:  # ref handles in WCQS that are no longer used
+    query = f"""SELECT ?sdcref WHERE {{
+  VALUES ?sdcref {{ sdcref:{' sdcref:'.join(s.tolist())} }}
+  OPTIONAL {{ ?m ?p [ prov:wasDerivedFrom ?sdcref ] }}
+  FILTER(!BOUND(?m)) .
+}}"""
+
+    payload = query_wcqs(session, query)
+    logging.info(f'Found {len(payload)} results in reference node validation')
+
+    invalid_references = []
+
+    for row in payload:
+        sdcref = row.get('sdcref', {}).get('value')
+        sdcref = sdcref[len(PREFIXES.get('SDCR', '')):]
+        invalid_references.append(sdcref)
+
+    return invalid_references
+
+
+def make_presentable_dataframe(df:pd.DataFrame, qids:pd.DataFrame) -> pd.DataFrame:
     df = df.merge(
         right=qids,
         how='left',
@@ -277,6 +294,7 @@ def main() -> None:
                 if not subject.startswith(prefix):
                     continue
                 subject = subject[len(prefix):]
+                subject_prefix = prefix
 
             predicate = row.get('predicate', {}).get('value')
             for prefix in PREFIXES.values():
@@ -293,6 +311,7 @@ def main() -> None:
             results.append(
                 {
                     'subject' : subject,
+                    'subject_prefix' : subject_prefix,
                     'predicate' : predicate,
                     'item' : item,
                 }
@@ -300,7 +319,12 @@ def main() -> None:
 
         sleep(WCQS_SLEEP)
 
-    df = make_presentable_dataframe(results, qids)
+    raw_df = pd.DataFrame.from_dict(data=results)
+
+    invalid_references = spot_invalid_references(session, raw_df.loc[(raw_df['subject_prefix']==PREFIXES.get('SDCR', '')), 'subject'])
+    raw_df = raw_df.loc[~raw_df['subject'].isin(invalid_references)]
+
+    df = make_presentable_dataframe(raw_df, qids)
     logging.info(f'Found {df.shape[0]} cases to list on report page')
 
     table = make_table(df)
