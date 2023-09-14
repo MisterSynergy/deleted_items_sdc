@@ -50,7 +50,7 @@ class Replica:
         self.replica = mariadb.connect(**REPLICA_PARAMS)
         self.cursor = self.replica.cursor(dictionary=True)
 
-    def __enter__(self) -> mariadb.connection.cursor:
+    def __enter__(self):
         return self.cursor
 
     def __exit__(self, exc_type, exc_val, exc_tb):
