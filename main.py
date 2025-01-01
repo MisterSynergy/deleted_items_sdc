@@ -274,6 +274,7 @@ def main() -> None:
     wd:{qids}
   }}
   ?file ?predicate ?item .
+  FILTER(STRSTARTS(STR(?predicate), STR(wdt:)) = false) .
 }}"""
 
     qids = query_deleted_items()
@@ -287,7 +288,7 @@ def main() -> None:
 
         payload = query_wcqs(session, query)
         logging.info(f'Found {len(payload)} results')
-        
+
         for row in payload:
             subject = row.get('file', {}).get('value')
             for prefix in PREFIXES.values():
